@@ -94,6 +94,4 @@ st.plotly_chart(fig)
 
 
 # Additional info
-"""# Date range selector
-start_date = pd.to_datetime(st.date_input("Select Start Date", min(df["date"])))
-end_date = pd.to_datetime(st.date_input("Select End Date", max(df["date"])))"""
+
