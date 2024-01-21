@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from datetime import datetime
+from datetime import timedelta
+import plotly.express as px
+
 
 # Replace 'sheet_name' with the actual sheet names in your Excel file
 sheet_names = ['yearly', 'monthly', 'quarterly', 'daily']
@@ -21,10 +23,29 @@ selected_currency = st.selectbox("Select Currency", currency_options)
 weight_options = ["Per Ounce", "Per Gram"]
 selected_weight = st.selectbox("Select Weight", weight_options)
 
-# Date range selector
-start_date = pd.to_datetime(st.date_input("Select Start Date", min(df["date"])))
-end_date = pd.to_datetime(st.date_input("Select End Date", max(df["date"])))
 
+date_range_buttons = ["7D", "1M", "3M", "1Y", "3Y", "Max"]
+selected_date_range = st.radio("Select Date Range", date_range_buttons,index=0, format_func=lambda x: f"{x} ")
+st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
+
+
+
+
+
+# Determine start and end dates based on selected date range
+end_date = max(df['date'])
+if selected_date_range == "7D":
+    start_date = end_date - timedelta(days=7)
+elif selected_date_range == "1M":
+    start_date = end_date - timedelta(days=30)
+elif selected_date_range == "3M":
+    start_date = end_date - timedelta(days=90)
+elif selected_date_range == "1Y":
+    start_date = end_date - timedelta(days=365)
+elif selected_date_range == "3Y":
+    start_date = end_date - timedelta(days=3*365)
+else:
+    start_date = min(df['date'])
 
 # Filter data based on currency and date range
 filtered_df = df.loc[(df['date'] >= start_date) & (df['date'] <= end_date)]
@@ -33,29 +54,46 @@ filtered_df = df.loc[(df['date'] >= start_date) & (df['date'] <= end_date)]
 # Convert prices based on selected weight
 if selected_weight == "Per Gram":
     # Convert prices from ounces to grams
-    filtered_df[selected_currency] *= 31.1035
+    filtered_df[selected_currency] /= 31.1035
 
 # Chart Generation
 # Plotting the data
 # Plotting the data with gold-like colors
-plt.figure(figsize=(10, 6))
-plt.plot(filtered_df['date'], filtered_df[selected_currency], color="#FFD700", label="Gold Price")
-plt.title(f"Gold Price in {selected_currency} ({selected_weight})")
-plt.xlabel("Date")
-plt.ylabel(f"Price ({selected_weight})")
+# Create a line plot with hover data
+# Plotting the data with gold-like colors
+fig = px.line(filtered_df, x='date', y=selected_currency,
+              labels={'date': 'Date', selected_currency: f"Price ({selected_weight})"},
+              line_shape='linear', render_mode='svg')
+
+# Customize the appearance with gold-like colors
+fig.update_layout(
+    title=f"Gold Price in {selected_currency} ({selected_weight})",
+    xaxis_title="Date",
+    yaxis_title=f"Price ({selected_weight})",
+    hovermode="x",
+    showlegend=True,
+    template="plotly_dark",
+    plot_bgcolor='#212121',  # Light Goldenrod Yellow
+    paper_bgcolor='#2E2E2E',  # Light Goldenrod Yellow
+    font=dict(color='#FFFFFF'),  # SaddleBrown
+)
 
 # Add a gold coin marker at the last data point
 last_date = filtered_df['date'].iloc[-1]
 last_price = filtered_df[selected_currency].iloc[-1]
-plt.scatter(last_date, last_price, color="#FFD700", marker="o", s=100, label="Last Data Point")
-
-# Beautify the graph
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
+fig.add_trace(
+    px.scatter(x=[last_date],
+               y=[last_price],
+               ).update_traces(
+                   marker=dict(symbol='circle', size=12, color='gold', line=dict(color='black', width=2))
+               ).data[0]
+)
 
 # Display the graph
-st.pyplot()
+st.plotly_chart(fig)
+
 
 # Additional info
-st.write("Note: Prices in the dataset are originally per ounce. Converted to grams if selected weight is per gram.")
+"""# Date range selector
+start_date = pd.to_datetime(st.date_input("Select Start Date", min(df["date"])))
+end_date = pd.to_datetime(st.date_input("Select End Date", max(df["date"])))"""
